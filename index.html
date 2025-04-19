@@ -72,10 +72,12 @@
         }
       }
 
+      const transportFormatted = transport.toLocaleString();
+      const hotelFormatted = hotel.toLocaleString();
       if (suggestedStay) {
-        resultText = `おすすめの最短滞在日数は ${suggestedStay} 泊です。`;
+        resultText = `交通費（往復）: ${transportFormatted} 円\n宿泊費（一泊）: ${hotelFormatted} 円\n\nおすすめの最短滞在日数は ${suggestedStay} 泊です。`;
       } else {
-        resultText = "30泊以内では条件に合う日数が見つかりませんでした。";
+        resultText = `交通費（往復）: ${transportFormatted} 円\n宿泊費（一泊）: ${hotelFormatted} 円\n\n30泊以内では条件に合う日数が見つかりませんでした。`;
       }
 
       document.getElementById("result").innerText = resultText;
