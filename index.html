@@ -1,87 +1,152 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>最短滞在日数計算機</title>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    label { display: block; margin-top: 10px; }
-    input, select { width: 200px; padding: 5px; }
-    #result { margin-top: 20px; font-weight: bold; }
-  </style>
+  <title>旅行コスト比較ツール</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <h1>最短滞在日数計算機</h1>
-
-  <label>交通費（往復）:
-    <input type="number" id="transportCost" value="100000">
+<h1>旅行コスト比較ツール</h1>
+<form id="tripForm">
+  <div class="group-title req">必須項目</div>
+  <label>交通費
+    <div class="transport">
+        <input class="money" id="transport" placeholder="例: 100000">
+        <span>円</span>
+    </div>
+  </label>
+  <label>1泊ごとの宿泊代
+    <div class="lodging">
+        <input class="money" id="lodging" placeholder="例: 15000">
+        <span>円</span>
+    </div>
+  </label>
+  <label>予算上限 
+    <div class="budget">
+        <input class="money" id="budget" placeholder="例: 200000">
+        <span>円</span>
+    </div>
   </label>
 
-  <label>宿泊費（一泊）:
-    <input type="number" id="hotelCost" value="15000">
+  <div class="group-title compare">比較するプラン</div>
+  <label>宿泊数１
+    <div class="stay1">
+        <input class="money" min="1" id="stay1" placeholder="例: 1">
+        <span>泊</span>
+    </div>
+  </label>
+  <label>宿泊数２
+    <div class="stay2">
+        <input type="number" min="1" id="stay2" placeholder="例: 2">
+        <span>泊</span>
+    </div>
+  </label>
+  <label>宿泊数３
+    <div class="stay3">
+        <input type="number" min="1" id="stay3" placeholder="例: 3">
+        <span>泊</span>
+    </div>
   </label>
 
-  <label>判定方法:
-    <select id="methodSelect" onchange="toggleTargetInput()">
-      <option value="rate">減少率の鈍化</option>
-      <option value="target">任意の1日あたり費用以下</option>
-    </select>
+  <div class="group-title opt">任意項目</div>
+  <label>1日ごとの食費
+    <div class="daily">
+        <input class="money" id="daily" placeholder="例: 5000">
+        <span>円</span>
+    </div>
   </label>
-
-  <label id="targetCostLabel" style="display: none;">目標1日あたり費用（円）:
-    <input type="number" id="targetCost">
+  <label>お土産・雑費
+    <div class="other">
+        <input class="money" id="other" placeholder="例: 10000">
+        <span>円</span>
+    </div>
   </label>
+  <div></div><!-- 空列 -->
 
-  <button onclick="calculate()">計算</button>
+  <div class="button-group">
+    <button type="button" id="calcBtn">計算する</button>
+  </div>
+  <div class="err" id="errMsg"></div>
+</form>
 
-  <div id="result"></div>
+<div class="cards" id="resultCards"></div>
+<div class="footer-msg" id="footerMsg"></div>
 
-  <script>
-    function toggleTargetInput() {
-      const method = document.getElementById("methodSelect").value;
-      document.getElementById("targetCostLabel").style.display = method === "target" ? "block" : "none";
-    }
+<script>
+// ===== ユーティリティ =====
+function cleanDigits(str){
+  return str.replace(/[^0-9]/g,'');
+}
+function formatCommas(num){
+  return (+num).toLocaleString();
+}
+function parseMoney(input){
+  const digits=cleanDigits(input.value);
+  return digits?+digits:0;
+}
+// ===== フォーマット（ blur / input ） =====
+function attachMoneyFormat(inp){
+  inp.addEventListener('input',()=>{
+    const caret=inp.selectionStart;
+    inp.value=cleanDigits(inp.value);
+    inp.setSelectionRange(caret,caret);
+  });
+  inp.addEventListener('blur',()=>{
+    const digits=cleanDigits(inp.value);
+    if(!digits){inp.value='';return;}
+    inp.value=formatCommas(digits);
+  });
+}
+document.querySelectorAll('input.money').forEach(attachMoneyFormat);
 
-    function calculate() {
-      const transport = Number(document.getElementById("transportCost").value);
-      const hotel = Number(document.getElementById("hotelCost").value);
-      const method = document.getElementById("methodSelect").value;
-      const target = Number(document.getElementById("targetCost").value);
+// ===== メイン計算 =====
+const calcBtn=document.getElementById('calcBtn');
+const errMsg=document.getElementById('errMsg');
+const cardsWrap=document.getElementById('resultCards');
+const footerMsg=document.getElementById('footerMsg');
+const palette=['var(--gradient-green)','var(--gradient-blue)','var(--gradient-purple)'];
 
-      let suggestedStay = null;
-      const maxDays = 30;
-      let resultText = "";
+calcBtn.addEventListener('click',()=>{
+  errMsg.textContent='';
+  cardsWrap.innerHTML='';
+  footerMsg.textContent='';
+  // 必須取得 & バリデーション
+  const transport=parseMoney(document.getElementById('transport')); if(!transport){errMsg.textContent='交通費を入力してください';return;}
+  const lodging=parseMoney(document.getElementById('lodging')); if(!lodging){errMsg.textContent='1泊ごとの宿泊代を入力してください';return;}
+  const budget=parseMoney(document.getElementById('budget'));
+  const daily=parseMoney(document.getElementById('daily'));
+  const other=parseMoney(document.getElementById('other'));
+  const stays=[
+    +document.getElementById('stay1').value||0,
+    +document.getElementById('stay2').value||0,
+    +document.getElementById('stay3').value||0,
+  ].filter(n=>n>0);
+  // 重複チェック
+  const dup=stays.filter((v,i,arr)=>arr.indexOf(v)!==i);
+  if(dup.length){errMsg.textContent='宿泊数が重複しています';return;}
+  if(!stays.length){errMsg.textContent='宿泊数を1つ以上入力してください';return;}
+  
+  stays.forEach((nights,idx)=>{
+    const total=transport+lodging*nights+daily*nights+other;
+    const avg=Math.round(total/nights);
+    const over=budget&&total>budget;
+    const card=document.createElement('div');
+    card.className='card'+(over?' over':'');
+    const headColor=palette[idx%palette.length];
+    card.innerHTML=`<div class="card-head" style="background:${headColor}">${nights}泊プラン</div>
+      <div class="card-body">
+        <p class="total">${formatCommas(total)}<span class="unit">円</span></p>
+        <p class="avg">1日平均: ${formatCommas(avg)} 円</p>
+        <p class="status ${over?'over':'ok'}">${over?'予算オーバー':'予算内'}</p>
+      </div>`;
+    cardsWrap.appendChild(card);
+  });
 
-      for (let days = 1; days <= maxDays; days++) {
-        const totalCost = transport + hotel * days;
-        const perDay = totalCost / days;
-
-        if (method === "target") {
-          if (perDay <= target) {
-            suggestedStay = days;
-            break;
-          }
-        } else if (method === "rate") {
-          const prevTotal = transport + hotel * (days - 1);
-          const prevPerDay = days > 1 ? prevTotal / (days - 1) : Infinity;
-          const drop = prevPerDay - perDay;
-          if (drop < 5000 && days > 1) {
-            suggestedStay = days;
-            break;
-          }
-        }
-      }
-
-      const transportFormatted = transport.toLocaleString();
-      const hotelFormatted = hotel.toLocaleString();
-      if (suggestedStay) {
-        resultText = `交通費（往復）: ${transportFormatted} 円\n宿泊費（一泊）: ${hotelFormatted} 円\n\nおすすめの最短滞在日数は ${suggestedStay} 泊です。`;
-      } else {
-        resultText = `交通費（往復）: ${transportFormatted} 円\n宿泊費（一泊）: ${hotelFormatted} 円\n\n30泊以内では条件に合う日数が見つかりませんでした。`;
-      }
-
-      document.getElementById("result").innerText = resultText;
-    }
-  </script>
+  // 交通費⇔宿泊費換算
+  footerMsg.textContent=`仮にもう一度来ると、交通費がもう1回分かかります。この交通費 ${formatCommas(transport)}円 は、宿泊費 ${formatCommas(lodging)}円/日 で考えると約 ${(transport/lodging).toFixed(1)}日分です。つまり、今 +${(transport/lodging).toFixed(1)}日滞在すると、次回の交通費分を今の旅に活かせます。`;
+});
+</script>
 </body>
 </html>

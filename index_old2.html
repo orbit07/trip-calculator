@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>旅行コスト比較ツール</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+ /* ===== 色・サイズ ===== */
+ :root{
+   --red:#e53935;
+   --orange:#fb8c00;
+   --blue:#1e88e5;
+   --gray:#f5f5f5;
+   --main:#1976d2;
+ }
+ html{box-sizing:border-box;}
+ *,*::before,*::after{box-sizing:inherit;}
+ body{font-family:"Helvetica Neue",Arial,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;background:#fff;margin:0;padding:20px;line-height:1.6;}
+ h1{font-size:1.6rem;margin-bottom:1rem;}
+ /* ===== フォーム ===== */
+ form{background:#fff;border:1px solid #ddd;border-radius:8px;padding:16px;max-width:680px;
+      display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+ .form-group{display:flex;flex-direction:column;}
+ .form-group label{font-size:.9rem;margin-bottom:4px;}
+ .form-group input{padding:6px 8px;border:1px solid #ccc;border-radius:4px;font-size:.9rem;}
+ .group-title{grid-column:1/-1;font-weight:bold;padding:6px 8px;border-radius:4px;color:#333;}
+ .title-required{background:#e3f2fd;}
+ .title-compare{background:#fff8e1;}
+ .title-optional{background:#e8f5e9;}
+ .button-group{grid-column:1/-1;display:flex;justify-content:center;}
+ .btn{padding:8px 24px;border:none;border-radius:4px;background:var(--main);color:#fff;font-size:.9rem;cursor:pointer;}
+ .btn:hover{opacity:.9;}
+ .err{grid-column:1/-1;color:#e53935;font-size:.85rem;margin-top:4px;min-height:1.2em;}
+ /* ===== カード ===== */
+ .card-container{display:flex;flex-wrap:wrap;gap:14px;margin-top:24px;}
+ .card{flex:1 1 260px;max-width:280px;background:#fff;border:1px solid #ddd;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.08);overflow:hidden;display:flex;flex-direction:column;}
+ .card-header{color:#fff;font-weight:bold;font-size:.85rem;text-align:center;padding:6px 0;}
+ .header-red{background:var(--red);} .header-orange{background:var(--orange);} .header-blue{background:var(--blue);} 
+ .card-body{padding:16px;flex:1;display:flex;flex-direction:column;gap:8px;}
+ .price{font-size:1.8rem;font-weight:bold;text-align:center;line-height:1.2;}
+ .price span{font-size:.9rem;font-weight:normal;}
+ .avg{font-size:1rem;text-align:center;color:#555;}
+ .budget-ok{color:#4caf50;text-align:center;font-size:.85rem;}
+ .budget-over{color:#c62828;text-align:center;font-size:.85rem;font-weight:bold;}
+ .notice{margin-top:24px;font-weight:bold;line-height:1.6;background:var(--gray);padding:12px;border-radius:6px;max-width:680px;}
+ @media(max-width:700px){form{grid-template-columns:1fr;} .card{flex:1 1 100%;}}
+</style>
+</head>
+<body>
+<h1>旅行コスト比較ツール</h1>
+
+<form id="costForm">
+  <!-- タイトル: 必須項目 -->
+  <div class="group-title title-required">必須項目</div>
+  <!-- 1 行目 | 必須入力 -->
+  <div class="form-group">
+    <label>交通費 (円)</label>
+    <input type="text" id="transport" class="num-input" placeholder="例: 100,000" required>
+  </div>
+  <div class="form-group">
+    <label>1泊ごとの宿泊代 (円)</label>
+    <input type="text" id="lodging" class="num-input" placeholder="例: 15,000" required>
+  </div>
+  <div class="form-group">
+    <label>予算上限 (円)</label>
+    <input type="text" id="budget" class="num-input" placeholder="例: 200,000" required>
+  </div>
+
+  <!-- タイトル: 比較するプラン -->
+  <div class="group-title title-compare">比較するプラン</div>
+  <!-- 2 行目 | 宿泊数 -->
+  <div class="form-group">
+    <label>比較する宿泊数 ①</label>
+    <input type="number" class="night-input" min="1" placeholder="例: 2">
+  </div>
+  <div class="form-group">
+    <label>比較する宿泊数 ②</label>
+    <input type="number" class="night-input" min="1" placeholder="例: 3">
+  </div>
+  <div class="form-group">
+    <label>比較する宿泊数 ③</label>
+    <input type="number" class="night-input" min="1" placeholder="例: 4">
+  </div>
+
+  <!-- タイトル: 任意項目 -->
+  <div class="group-title title-optional">任意項目</div>
+  <!-- 3 行目 | 任意入力 -->
+  <div class="form-group">
+    <label>1日ごとの食費 (円, 任意)</label>
+    <input type="text" id="food" class="num-input" placeholder="0">
+  </div>
+  <div class="form-group">
+    <label>お土産代など雑費 (円, 任意)</label>
+    <input type="text" id="misc" class="num-input" placeholder="0">
+  </div>
+  <div class="form-group"></div><!-- 空セル -->
+
+  <!-- 計算ボタン -->
+  <div class="button-group">
+    <button type="submit" class="btn">計算する</button>
+  </div>
+
+  <!-- エラーメッセージ -->
+  <div id="errorMsg" class="err"></div>
+</form>
+
+<div id="cards" class="card-container"></div>
+<div id="notice" class="notice" style="display:none;"></div>
+
+<script>
+/* ===== ユーティリティ =====*/
+const headers=["header-red","header-orange","header-blue"];
+function cleanDigits(str){return (str||"").replace(/[^0-9]/g,"");}
+function toNum(str){return +cleanDigits(str)||0;}
+function formatComma(val){if(val===""||isNaN(val)) return val;return (+cleanDigits(val)).toLocaleString();}
+/* ===== 数値入力 カンマ付け =====*/
+document.querySelectorAll('.num-input').forEach(inp=>{
+  inp.addEventListener('blur',()=>{inp.value=formatComma(inp.value);});
+});
+/* ===== フォーム送信 =====*/
+document.getElementById('costForm').addEventListener('submit',e=>{
+  e.preventDefault();
+  const errorBox=document.getElementById('errorMsg');
+  errorBox.textContent="";
+
+  const transport=toNum(document.getElementById('transport').value);
+  const lodging=toNum(document.getElementById('lodging').value);
+  const budget=toNum(document.getElementById('budget').value);
+  const food=toNum(document.getElementById('food').value);
+  const misc=toNum(document.getElementById('misc').value);
+
+  const nightInputs=[...document.querySelectorAll('.night-input')];
+  let nightsList=nightInputs.map(i=>parseInt(i.value,10)).filter(n=>!isNaN(n)&&n>0);
+
+  // 重複チェック
+  const dup=nightsList.some((n,i,arr)=>arr.indexOf(n)!==i);
+  if(dup){errorBox.textContent='宿泊数が重複しています。別々の数字を入力してください。';return;}
+  if(!nightsList.length){errorBox.textContent='宿泊数を1つ以上入力してください。';return;}
+
+  // カード生成
+  const cardsDiv=document.getElementById('cards');
+  cardsDiv.innerHTML="";
+  nightsList.slice(0,3).forEach((n,i)=>{
+    const total=transport+lodging*n+food*n+misc;
+    const avg=Math.round(total/n);
+    const over=budget>0 && total>budget;
+    const card=document.createElement('div');
+    card.className='card';
+    card.innerHTML=`<div class="card-header ${headers[i%headers.length]}">${n} 泊プラン</div>
+      <div class="card-body">
+        <div class="price">${total.toLocaleString()}<span> 円</span></div>
+        <div class="avg">1日平均: ${avg.toLocaleString()} 円</div>
+        <div class="${over? 'budget-over':'budget-ok'}">${over? '予算オーバー':'予算内'}</div>
+      </div>`;
+    cardsDiv.appendChild(card);
+  });
+
+  /* ===== 交通費→宿泊日数 換算 =====*/
+  const minLodging = lodging>0? lodging : 1; // avoid zero
+  const extraDays=Math.round(transport/minLodging);
+  const notice=document.getElementById('notice');
+  notice.innerHTML=`仮にもう一度来ると、交通費がもう1回分かかります。<br>
+  この交通費 <strong>${transport.toLocaleString()}円</strong> は、宿泊費 <strong>${lodging.toLocaleString()}円/日</strong> で考えると約 <strong>${extraDays}日ぶん</strong> です。<br>
+  つまり、今+<strong>${extraDays}日</strong>滞在すると、次回の交通費分を今の旅に活かせます。`;
+  notice.style.display='block';
+});
+</script>
+</body>
+</html>

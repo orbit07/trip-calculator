@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>最短滞在日数計算機</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    label { display: block; margin-top: 10px; }
+    input, select { width: 200px; padding: 5px; }
+    #result { margin-top: 20px; font-weight: bold; }
+  </style>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>最短滞在日数計算機</h1>
+
+  <label>交通費（往復）:
+    <input type="number" id="transportCost" value="100000">
+  </label>
+
+  <label>宿泊費（一泊）:
+    <input type="number" id="hotelCost" value="15000">
+  </label>
+
+  <label>判定方法:
+    <select id="methodSelect" onchange="toggleTargetInput()">
+      <option value="rate">減少率の鈍化</option>
+      <option value="target">任意の1日あたり費用以下</option>
+    </select>
+  </label>
+
+  <label id="targetCostLabel" style="display: none;">目標1日あたり費用（円）:
+    <input type="number" id="targetCost">
+  </label>
+
+  <button onclick="calculate()">計算</button>
+
+  <div id="result"></div>
+
+  <canvas id="barChart" width="400" height="200"></canvas>
+
+  <script>
+    function toggleTargetInput() {
+      const method = document.getElementById("methodSelect").value;
+      document.getElementById("targetCostLabel").style.display = method === "target" ? "block" : "none";
+    }
+
+    function calculate() {
+      const transport = Number(document.getElementById("transportCost").value);
+      const hotel = Number(document.getElementById("hotelCost").value);
+      const method = document.getElementById("methodSelect").value;
+      const target = Number(document.getElementById("targetCost").value);
+
+      let suggestedStay = null;
+      const maxDays = 30;
+      let resultText = "";
+
+      for (let days = 1; days <= maxDays; days++) {
+        const totalCost = transport + hotel * days;
+        const perDay = totalCost / days;
+
+        if (method === "target") {
+          if (perDay <= target) {
+            suggestedStay = days;
+            break;
+          }
+        } else if (method === "rate") {
+          const costPerDay = [];
+          const drops = [];
+
+          for (let i = 1; i <= maxDays; i++) {
+            const total = transport + hotel * i;
+            costPerDay[i] = total / i;
+          }
+
+          for (let i = 2; i <= maxDays; i++) {
+            drops[i] = costPerDay[i - 1] - costPerDay[i];
+          }
+
+          const baseDrop = drops[2]; // 1日→2日の差額を基準
+
+          for (let i = 3; i <= maxDays; i++) {
+            const ratio = drops[i] / baseDrop;
+            if (ratio < 0.25) { // 25%未満になったら「鈍化」
+              suggestedStay = i;
+              break;
+            }
+          }
+
+          // それでも見つからなかった場合は30泊目を仮の目安とする
+          if (!suggestedStay) {
+            suggestedStay = maxDays;
+          }
+        }
+      }
+
+      const transportFormatted = transport.toLocaleString();
+      const hotelFormatted = hotel.toLocaleString();
+      if (suggestedStay) {
+        resultText = `交通費（往復）: ${transportFormatted} 円\n宿泊費（一泊）: ${hotelFormatted} 円\n\nおすすめの最短滞在日数は ${suggestedStay} 泊です。`;
+      } else {
+        resultText = `交通費（往復）: ${transportFormatted} 円\n宿泊費（一泊）: ${hotelFormatted} 円\n\n30泊以内では条件に合う日数が見つかりませんでした。`;
+      }
+
+      document.getElementById("result").innerText = resultText;
+
+      document.getElementById('barChart').remove();
+      const newCanvas = document.createElement('canvas');
+      newCanvas.id = 'barChart';
+      newCanvas.width = 400;
+      newCanvas.height = 200;
+      document.body.appendChild(newCanvas);
+
+      const labels = [];
+      const data = [];
+
+      for (let i = 1; i <= suggestedStay + 1; i++) {
+        labels.push(i + "泊");
+        data.push((transport + hotel * i) / i);
+      }
+
+      const ctx = document.getElementById('barChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: '1日あたりの費用（円）',
+            data: data,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: false,
+              ticks: {
+                callback: function(value) {
+                  return value.toLocaleString() + ' 円';
+                }
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      });
+
+    }
+
+  </script>
+</body>
+</html>

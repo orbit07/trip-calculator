@@ -1,0 +1,228 @@
+/* ===== カラーパレット ===== */
+:root {
+    --red: #e53935;
+    --orange: #fb8c00;
+    --blue: #1e88e5;
+    --green: #4caf50;
+    --gray: #9E9E9E;
+    --main: #1976d2;
+    --gradient-green: linear-gradient(135deg, #4caf50, #81c784);
+    --gradient-blue: linear-gradient(135deg, #1e88e5, #64b5f6);
+    --gradient-purple: linear-gradient(135deg, #7e57c2, #b39ddb);
+    --gradient-gray: linear-gradient(135deg, #9E9E9E, #D3D3D3);
+    --background: #f5f5f5;
+    --card-shadow: rgba(0, 0, 0, 0.1);
+    --text-color: #333;
+    --button-hover: rgba(0, 0, 0, 0.05);
+}
+
+html {
+    box-sizing: border-box;
+}
+
+*, *::before, *::after {
+    box-sizing: inherit;
+}
+
+body {
+    background: var(--background);
+    color: var(--text-color);
+    font-family: 'M PLUS Rounded 1c', "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+    margin: 0;
+    padding: 24px;
+}
+
+h1 {
+    text-align: center;
+    font-size: 2rem;
+    background: var(--gradient-green);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1.5rem;
+}
+
+/* ========= フォーム ========= */
+form {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    max-width: 900px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px var(--card-shadow);
+    padding: 24px;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    font-size: 1rem;
+    gap: 4px;
+    margin-bottom: 16px;
+}
+
+label > div {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+input[type="number"], input.money {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    text-align: right;
+    font-size: 1rem;
+}
+
+input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+}
+
+input.money:focus {
+    outline: none;
+    border-color: #4caf50;
+    box-shadow: 0 0 4px rgba(76, 175, 80, 0.5);
+}
+
+.group-title {
+    grid-column: 1 / -1;
+    padding: 8px 12px;
+    font-weight: bold;
+    border-radius: 4px;
+    color: #fff;
+    letter-spacing: 0.05em;
+}
+
+.req,
+.compare {
+    background: var(--gradient-green);
+}
+
+.opt {
+    background: var(--gradient-gray);
+}
+
+.button-group {
+    grid-column: 1 / -1;
+    text-align: center;
+    margin-top: 8px;
+}
+
+button {
+    background: var(--gradient-blue);
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: 0.3s, transform 0.2s;
+}
+
+button:hover {
+    transform: translateY(-2px);
+}
+
+.err {
+    grid-column: 1 / -1;
+    color: var(--red);
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    form {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ========= カード表示 ========= */
+.cards {
+    max-width: 900px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 32px auto 0;
+    padding: 0;
+}
+
+.card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 8px var(--card-shadow);
+    width: calc(100% / 3 - 20px);
+    margin-right: 30px;
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+
+.card:nth-last-child(1) {
+    margin-right: 0;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+}
+
+.card.over {
+    background: #fdecea;
+}
+
+.card-head {
+    background: var(--gradient-green);
+    color: #fff;
+    text-align: center;
+    padding: 16px;
+    font-size: 1.2rem;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+}
+
+.card-body {
+    padding: 16px;
+    text-align: center;
+}
+
+.card-body .total {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--text-color);
+    margin: 0;
+}
+
+.card-body .unit {
+    font-size: 1.2rem;
+}
+
+.card-body .avg {
+    font-size: 1rem;
+    color: #666;
+    margin-top: 8px;
+}
+
+.card-body .status {
+    font-size: 1rem;
+    font-weight: bold;
+    margin-top: 12px;
+}
+
+.status.over {
+    color: #e53935;
+}
+
+.status.ok {
+    color: #4caf50;
+}
+
+/* ========= フッター ========= */
+.footer-msg {
+    color: var(--gray);
+    margin-top: 16px;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
